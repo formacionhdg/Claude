@@ -1,0 +1,326 @@
+{
+  "name": "Radar Ofertas Docentes - 10AM",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 * * *"
+            }
+          ]
+        }
+      },
+      "id": "node-schedule-0001",
+      "name": "Schedule 10:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://serpapi.com/search.json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "engine",          "value": "google_jobs" },
+            { "name": "hl",              "value": "es" },
+            { "name": "gl",              "value": "es" },
+            { "name": "q",               "value": "formador OR tutor OR docente" },
+            { "name": "location",        "value": "Spain" },
+            { "name": "chips",           "value": "date_posted:week" },
+            { "name": "api_key",         "value": "TU_CLAVE_SERPAPI" }
+          ]
+        }
+      },
+      "id": "node-serpapi-online-0002",
+      "name": "SerpAPI Online España",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [280, -80],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://serpapi.com/search.json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "engine",          "value": "google_jobs" },
+            { "name": "hl",              "value": "es" },
+            { "name": "gl",              "value": "es" },
+            { "name": "q",               "value": "formador Madrid" },
+            { "name": "location",        "value": "Madrid, Spain" },
+            { "name": "chips",           "value": "date_posted:week" },
+            { "name": "api_key",         "value": "TU_CLAVE_SERPAPI" }
+          ]
+        }
+      },
+      "id": "node-serpapi-presencial-0003",
+      "name": "SerpAPI Presencial Madrid",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [280, 60],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.adzuna.com/v1/api/jobs/es/search/1",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "app_id",          "value": "TU_ADZUNA_APP_ID" },
+            { "name": "app_key",         "value": "TU_ADZUNA_APP_KEY" },
+            { "name": "what",            "value": "formador" },
+            { "name": "results_per_page","value": "20" },
+            { "name": "max_days_old",    "value": "1" }
+          ]
+        }
+      },
+      "id": "node-adzuna-online-0004",
+      "name": "Adzuna Online España",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [280, 200],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.adzuna.com/v1/api/jobs/es/search/1",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "app_id",          "value": "TU_ADZUNA_APP_ID" },
+            { "name": "app_key",         "value": "TU_ADZUNA_APP_KEY" },
+            { "name": "what",            "value": "formador" },
+            { "name": "where",           "value": "Madrid" },
+            { "name": "results_per_page","value": "20" },
+            { "name": "max_days_old",    "value": "1" }
+          ]
+        }
+      },
+      "id": "node-adzuna-presencial-0005",
+      "name": "Adzuna Presencial Madrid",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [280, 340],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Expande el array jobs_results de SerpAPI y etiqueta cada oferta\nconst items = $input.all();\nconst out = [];\nfor (const item of items) {\n  const d = item.json;\n  // Continue On Fail puede pasar un objeto error\n  if (d.error || (d.statusCode && d.statusCode >= 400)) {\n    out.push({ json: { _source: 'serpapi', _empty: true } });\n    continue;\n  }\n  const jobs = d.jobs_results || [];\n  if (jobs.length === 0) {\n    out.push({ json: { _source: 'serpapi', _empty: true } });\n  } else {\n    for (const job of jobs) {\n      out.push({ json: { ...job, _source: 'serpapi' } });\n    }\n  }\n}\nreturn out.length > 0 ? out : [{ json: { _source: 'serpapi', _empty: true } }];"
+      },
+      "id": "node-expandir-serpapi-online-0006",
+      "name": "Expandir SerpAPI Online",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, -80]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Expande el array jobs_results de SerpAPI y etiqueta cada oferta\nconst items = $input.all();\nconst out = [];\nfor (const item of items) {\n  const d = item.json;\n  if (d.error || (d.statusCode && d.statusCode >= 400)) {\n    out.push({ json: { _source: 'serpapi', _empty: true } });\n    continue;\n  }\n  const jobs = d.jobs_results || [];\n  if (jobs.length === 0) {\n    out.push({ json: { _source: 'serpapi', _empty: true } });\n  } else {\n    for (const job of jobs) {\n      out.push({ json: { ...job, _source: 'serpapi' } });\n    }\n  }\n}\nreturn out.length > 0 ? out : [{ json: { _source: 'serpapi', _empty: true } }];"
+      },
+      "id": "node-expandir-serpapi-presencial-0007",
+      "name": "Expandir SerpAPI Presencial",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 60]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Expande el array results de Adzuna y etiqueta cada oferta\nconst items = $input.all();\nconst out = [];\nfor (const item of items) {\n  const d = item.json;\n  if (d.error || (d.statusCode && d.statusCode >= 400)) {\n    out.push({ json: { _source: 'adzuna', _empty: true } });\n    continue;\n  }\n  const jobs = d.results || [];\n  if (jobs.length === 0) {\n    out.push({ json: { _source: 'adzuna', _empty: true } });\n  } else {\n    for (const job of jobs) {\n      out.push({ json: { ...job, _source: 'adzuna' } });\n    }\n  }\n}\nreturn out.length > 0 ? out : [{ json: { _source: 'adzuna', _empty: true } }];"
+      },
+      "id": "node-expandir-adzuna-online-0008",
+      "name": "Expandir Adzuna Online",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Expande el array results de Adzuna y etiqueta cada oferta\nconst items = $input.all();\nconst out = [];\nfor (const item of items) {\n  const d = item.json;\n  if (d.error || (d.statusCode && d.statusCode >= 400)) {\n    out.push({ json: { _source: 'adzuna', _empty: true } });\n    continue;\n  }\n  const jobs = d.results || [];\n  if (jobs.length === 0) {\n    out.push({ json: { _source: 'adzuna', _empty: true } });\n  } else {\n    for (const job of jobs) {\n      out.push({ json: { ...job, _source: 'adzuna' } });\n    }\n  }\n}\nreturn out.length > 0 ? out : [{ json: { _source: 'adzuna', _empty: true } }];"
+      },
+      "id": "node-expandir-adzuna-presencial-0009",
+      "name": "Expandir Adzuna Presencial",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 340]
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "id": "node-merge-0010",
+      "name": "Merge Resultados",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [840, 130]
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\n\n// Rol docente\nconst KW_DOCENTE = [\n  'formador','formadora','docente','tutor','tutora',\n  'instructor','instructora','facilitador',\n  'formacion','teleformacion','e-learning',\n  'profesor','profesora'\n];\n\n// Familias formativas\nconst KW_FAMILIA = [\n  'inteligencia artificial','ia aplicada','ia generativa','chatgpt','copilot','llm',\n  'marketing digital','marketing online','redes sociales','seo','sem',\n  'transformacion digital','automatizacion','digitalizacion',\n  'turismo','hosteleria','hoteleria','agencia de viajes',\n  'asistencia a la direccion','secretariado','administracion',\n  'ofimatica','excel','microsoft 365','power bi','looker',\n  'protocolo','hospitalidad'\n];\n\n// Exclusiones: docencia reglada / académica\nconst KW_EXCLUIR = [\n  'eso','bachillerato','primaria','secundaria','educacion infantil',\n  'aneca','catedratico','oposicion','oposiciones',\n  'phd','tesis doctoral','investigador',\n  'colegio internacional','escuela de idiomas',\n  'docente universitario','profesor universitario',\n  'facultad','master universitario','grado universitario'\n];\n\nconst strip = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n\nconst containsWord = (text, keyword) => {\n  const escaped = strip(keyword).replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n  const re = new RegExp('\\\\b' + escaped + '\\\\b', 'i');\n  return re.test(text);\n};\nconst matchesAny = (text, keywords) => keywords.some(k => containsWord(text, k));\n\nconst normalize = (d) => {\n  if (d._source === 'serpapi' && !d._empty && d.title) {\n    const ext   = d.detected_extensions || {};\n    const alink = d.apply_link\n      || (d.apply_options && d.apply_options[0]?.link)\n      || (d.related_links && d.related_links[0]?.link)\n      || '';\n    return {\n      _id:   'srp_' + (d.job_id || strip(d.title)).replace(/[^a-zA-Z0-9]/g,'').slice(0,40),\n      title: d.title,\n      company: d.company_name || '',\n      location: d.location || '',\n      link: alink,\n      pubDate: ext.posted_at || '',\n      description: d.description || '',\n      telework: ext.work_from_home ? 'remote' : '',\n      salary_text: ext.salary || '',\n      source: 'Google Jobs'\n    };\n  }\n  if (d._source === 'adzuna' && !d._empty && d.title) {\n    const salMin = d.salary_min ? Math.round(d.salary_min) : null;\n    const salMax = d.salary_max ? Math.round(d.salary_max) : null;\n    const salText = salMin ? (salMax && salMax !== salMin ? salMin + '€-' + salMax + '€' : salMin + '€') : '';\n    return {\n      _id:   'adz_' + (d.id || strip(d.title)).replace(/[^a-zA-Z0-9]/g,'').slice(0,40),\n      title: d.title,\n      company: d.company?.display_name || '',\n      location: d.location?.display_name || '',\n      link: d.redirect_url || '',\n      pubDate: d.created || '',\n      description: d.description || '',\n      telework: '',\n      salary_text: salText,\n      source: 'Adzuna'\n    };\n  }\n  return null;\n};\n\n// FIX: SerpAPI con hl=es devuelve fechas en español ('hace X días').\n// Antes caían al bloque try/catch donde new Date('hace 2 días') = NaN → siempre true.\n// Ahora se capturan explícitamente antes del fallback.\nconst isWithin24h = (pub) => {\n  if (!pub) return true;\n  const t = String(pub).trim().toLowerCase();\n  // Hoy / hace pocas horas\n  if (/\\d+\\s*h(our)?|just\\s+post|today|hoy/.test(t)) return true;\n  // Exactamente 1 día (inglés y español)\n  if (/^1\\s+day|hace\\s+1\\s+d[ií]a|hace\\s+un\\s+d[ií]a/.test(t)) return true;\n  // Más de 1 día en inglés\n  if (/[2-9]\\s+day|\\bweek|\\bmonth|\\byear/.test(t)) return false;\n  // Más de 1 día en español: 'hace 2 días', '3 días', etc.\n  if (/hace\\s+[2-9]\\s+d[ií]a/.test(t)) return false;\n  if (/^[2-9]\\s+d[ií]a/.test(t)) return false;\n  // Fallback: fecha ISO (Adzuna usa ISO 8601)\n  try {\n    const diff = (new Date() - new Date(pub)) / 3600000;\n    return isNaN(diff) ? true : diff <= 30;\n  } catch(e) { return true; }\n};\n\nconst isAutonomo = (text) =>\n  /autono|mercantil|freelance|contrato\\s+de\\s+serv|por\\s+cuenta\\s+propia|factura|honorari/.test(strip(text));\n\nconst extractHourly = (text) => {\n  if (!text) return null;\n  const t = text.replace(/\\./g,'').replace(',','.').toLowerCase();\n  let m = t.match(/(\\d+(?:\\.\\d+)?)\\s*(?:€|eur)\\s*(?:\\/|por\\s+)h(?:ora)?/);\n  if (m) return parseFloat(m[1]);\n  m = t.match(/(\\d+(?:\\.\\d+)?)\\s*(?:€|eur)\\s*(?:\\/|al\\s+|por\\s+)mes/);\n  if (m) return parseFloat(m[1]) / 160;\n  m = t.match(/(\\d{4,6}(?:\\.\\d+)?)\\s*(?:€|eur)/);\n  if (m && parseFloat(m[1]) > 5000) return parseFloat(m[1]) / 1800;\n  return null;\n};\n\nconst shouldDiscard = (item) => {\n  if (item.category === 'tutorizacion') return false;\n  const fullText = item.title + ' ' + item.description + ' ' + item.salary_text;\n  if (!isAutonomo(fullText)) return false;\n  const rate = extractHourly(fullText);\n  if (rate === null) return false;\n  return rate < 20;\n};\n\nconst normalized = allItems.map(i => normalize(i.json)).filter(Boolean);\n\nconst seenInRun = new Set();\nconst unique = normalized.filter(item => {\n  if (seenInRun.has(item._id)) return false;\n  seenInRun.add(item._id);\n  return true;\n});\n\nconst sd = $getWorkflowStaticData('global');\nif (!sd.seenIds) sd.seenIds = [];\nif (sd.seenIds.length > 800) sd.seenIds = sd.seenIds.slice(-800);\nconst newItems = unique.filter(item => !sd.seenIds.includes(item._id));\nsd.seenIds.push(...newItems.map(i => i._id));\n\nconst recent = newItems.filter(item => isWithin24h(item.pubDate));\n\nconst relevant = recent.filter(item => {\n  const text = strip(item.title + ' ' + item.description + ' ' + item.company);\n  if (matchesAny(text, KW_EXCLUIR)) return false;\n  const hasDocente = matchesAny(text, KW_DOCENTE);\n  const hasFamilia = matchesAny(text, KW_FAMILIA);\n  return hasDocente && hasFamilia;\n});\n\nconst categorized = relevant.map(item => {\n  const t = strip(item.title + ' ' + item.description + ' ' + item.telework);\n  let category = 'presencial';\n  if (/\\btutor(a|izacion)?\\b/.test(t)) category = 'tutorizacion';\n  else if (/online|teleformac|teletrabajo|a\\s+distancia|e.?learning|remoto/.test(t)) category = 'online';\n  return { ...item, category, _hasResults: true };\n});\n\nconst final = categorized.filter(item => !shouldDiscard(item));\n\nreturn final.length > 0\n  ? final.map(item => ({ json: item }))\n  : [{ json: { _hasResults: false } }];"
+      },
+      "id": "node-filtrar-deduplicar-0011",
+      "name": "Filtrar y Deduplicar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1060, 130]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-hasresults",
+              "leftValue": "={{ $json._hasResults }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "node-if-hayofertas-0012",
+      "name": "¿Hay ofertas?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1280, 130]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst online    = items.filter(i => i.json.category === 'online');\nconst tutoria   = items.filter(i => i.json.category === 'tutorizacion');\nconst presencial = items.filter(i => i.json.category === 'presencial');\n\nconst fmt = (item) => {\n  const j = item.json;\n  let s = `*${j.title}*`;\n  if (j.company)     s += ` — ${j.company}`;\n  if (j.location)    s += ` (${j.location})`;\n  if (j.salary_text) s += `\\n  💰 ${j.salary_text}`;\n  if (j.source)      s += `\\n  📌 ${j.source}`;\n  if (j.link)        s += `\\n  🔗 ${j.link}`;\n  return s;\n};\n\nconst today = new Date().toLocaleDateString('es-ES', {\n  weekday: 'long', day: 'numeric', month: 'long'\n});\nconst total = items.length;\n\nconst lines = [];\nlines.push(`🎓 *RADAR OFERTAS DOCENTES* — ${today}`);\nlines.push(`${total} oferta${total !== 1 ? 's' : ''} nueva${total !== 1 ? 's' : ''} encontrada${total !== 1 ? 's' : ''}`);\n\nif (online.length > 0) {\n  lines.push('');\n  lines.push(`🌐 *ONLINE / TELEFORMACIÓN* (${online.length})`);\n  lines.push(online.map(fmt).join('\\n\\n'));\n}\nif (tutoria.length > 0) {\n  lines.push('');\n  lines.push(`📚 *TUTORIZACIÓN* (${tutoria.length})`);\n  lines.push(tutoria.map(fmt).join('\\n\\n'));\n}\nif (presencial.length > 0) {\n  lines.push('');\n  lines.push(`📍 *PRESENCIAL MADRID* (${presencial.length})`);\n  lines.push(presencial.map(fmt).join('\\n\\n'));\n  lines.push('\\n_ℹ️ Verificar distancia desde Puerta del Ángel_');\n}\n\nreturn [{ json: { text: lines.join('\\n') } }];"
+      },
+      "id": "node-formatear-mensaje-0013",
+      "name": "Formatear Mensaje",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1500, 0]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "-5468941397",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "node-telegram-resumen-0014",
+      "name": "Telegram Resumen",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1720, 0],
+      "credentials": {
+        "telegramApi": {
+          "id": "REEMPLAZAR_CON_ID_CREDENCIAL",
+          "name": "Bot Empleo Telegram"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "-5468941397",
+        "text": "🔍 Sin ofertas nuevas hoy en el radar docente.",
+        "additionalFields": {}
+      },
+      "id": "node-telegram-sin-novedades-0015",
+      "name": "Telegram Sin Novedades",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1500, 280],
+      "credentials": {
+        "telegramApi": {
+          "id": "REEMPLAZAR_CON_ID_CREDENCIAL",
+          "name": "Bot Empleo Telegram"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule 10:00": {
+      "main": [
+        [
+          { "node": "SerpAPI Online España",     "type": "main", "index": 0 },
+          { "node": "SerpAPI Presencial Madrid", "type": "main", "index": 0 },
+          { "node": "Adzuna Online España",       "type": "main", "index": 0 },
+          { "node": "Adzuna Presencial Madrid",   "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "SerpAPI Online España": {
+      "main": [[ { "node": "Expandir SerpAPI Online",     "type": "main", "index": 0 } ]]
+    },
+    "SerpAPI Presencial Madrid": {
+      "main": [[ { "node": "Expandir SerpAPI Presencial", "type": "main", "index": 0 } ]]
+    },
+    "Adzuna Online España": {
+      "main": [[ { "node": "Expandir Adzuna Online",      "type": "main", "index": 0 } ]]
+    },
+    "Adzuna Presencial Madrid": {
+      "main": [[ { "node": "Expandir Adzuna Presencial",  "type": "main", "index": 0 } ]]
+    },
+    "Expandir SerpAPI Online": {
+      "main": [[ { "node": "Merge Resultados", "type": "main", "index": 0 } ]]
+    },
+    "Expandir SerpAPI Presencial": {
+      "main": [[ { "node": "Merge Resultados", "type": "main", "index": 1 } ]]
+    },
+    "Expandir Adzuna Online": {
+      "main": [[ { "node": "Merge Resultados", "type": "main", "index": 2 } ]]
+    },
+    "Expandir Adzuna Presencial": {
+      "main": [[ { "node": "Merge Resultados", "type": "main", "index": 3 } ]]
+    },
+    "Merge Resultados": {
+      "main": [[ { "node": "Filtrar y Deduplicar", "type": "main", "index": 0 } ]]
+    },
+    "Filtrar y Deduplicar": {
+      "main": [[ { "node": "¿Hay ofertas?", "type": "main", "index": 0 } ]]
+    },
+    "¿Hay ofertas?": {
+      "main": [
+        [ { "node": "Formatear Mensaje",       "type": "main", "index": 0 } ],
+        [ { "node": "Telegram Sin Novedades",  "type": "main", "index": 0 } ]
+      ]
+    },
+    "Formatear Mensaje": {
+      "main": [[ { "node": "Telegram Resumen", "type": "main", "index": 0 } ]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null
+}
