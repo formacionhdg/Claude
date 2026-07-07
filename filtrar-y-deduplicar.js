@@ -31,14 +31,16 @@ const KW_ADULTOS = [
   'trabajadores en activo','pyme','autonomo','accion formativa'
 ];
 
-// Exclusiones: docencia reglada / académica
+// Exclusiones: docencia reglada / académica / prácticas
 const KW_EXCLUIR = [
   'eso','bachillerato','primaria','secundaria','educacion infantil',
   'aneca','catedratico','oposicion','oposiciones',
   'phd','tesis doctoral','investigador',
   'colegio internacional','escuela de idiomas',
   'docente universitario','profesor universitario',
-  'facultad','master universitario','grado universitario'
+  'facultad','master universitario','grado universitario',
+  // Prácticas / becas: nunca son puestos docentes
+  'practicas','becario','becaria','beca de practicas','programa de practicas'
 ];
 
 const strip = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
