@@ -31,7 +31,7 @@ const KW_ADULTOS = [
   'trabajadores en activo','pyme','autonomo','accion formativa'
 ];
 
-// Exclusiones: docencia reglada / académica / prácticas
+// Exclusiones: docencia reglada / académica
 const KW_EXCLUIR = [
   'eso','bachillerato','primaria','secundaria','educacion infantil',
   'aneca','catedratico','oposicion','oposiciones',
@@ -39,8 +39,8 @@ const KW_EXCLUIR = [
   'colegio internacional','escuela de idiomas',
   'docente universitario','profesor universitario',
   'facultad','master universitario','grado universitario',
-  // Prácticas / becas: nunca son puestos docentes
-  'practicas','becario','becaria','beca de practicas','programa de practicas'
+  // Becas: inequívocamente no son puestos docentes
+  'becario','becaria'
 ];
 
 const strip = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -102,18 +102,18 @@ const isWithin24h = (pub) => {
   // "hace 1 día" / "1 day ago"
   if (/^1\s+day|hace\s+1\s+d[ií]a|hace\s+un\s+d[ií]a/.test(t)) return true;
 
-  // Más de 1 día en inglés
-  if (/[2-9]\s+day|\bweek|\bmonth|\byear/.test(t)) return false;
-  // Más de 1 día en español: "hace 2 días", "hace 3 días", "2 días", "3 días", etc.
-  // FIX: SerpAPI con hl=es devuelve fechas relativas en español que el bloque anterior
-  // no capturaba, cayendo al parse NaN y devolviendo true incorrectamente.
-  if (/hace\s+[2-9]\s+d[ií]a/.test(t)) return false;
-  if (/^[2-9]\s+d[ií]a/.test(t)) return false;
+  // "hace 2 días" / "2 days" — aceptar (ventana de 3 días para tener volumen de SerpAPI)
+  if (/^2\s+day|hace\s+2\s+d[ií]a/.test(t)) return true;
+  if (/^2\s+d[ií]a/.test(t)) return true;
+  // 3+ días: descartar
+  if (/[3-9]\s+day|\bweek|\bmonth|\byear/.test(t)) return false;
+  if (/hace\s+[3-9]\s+d[ií]a/.test(t)) return false;
+  if (/^[3-9]\s+d[ií]a/.test(t)) return false;
 
-  // Fallback: intentar parsear como fecha ISO (Adzuna devuelve ISO 8601)
+  // Fallback: fecha ISO (Adzuna devuelve ISO 8601)
   try {
     const diff = (new Date() - new Date(pub)) / 3600000;
-    return isNaN(diff) ? true : diff <= 30;
+    return isNaN(diff) ? true : diff <= 72;
   } catch(e) { return true; }
 };
 
@@ -161,6 +161,9 @@ const recent = newItems.filter(item => isWithin24h(item.pubDate));
 const relevant = recent.filter(item => {
   const text = strip(item.title + ' ' + item.description + ' ' + item.company);
   if (matchesAny(text, KW_EXCLUIR)) return false;
+  // Excluir si el TÍTULO empieza por "practicas" → son puestos de becario, no docentes
+  // (no se usa KW_EXCLUIR para evitar bloquear descripciones con "prácticas formativas")
+  if (/^practicas\b/.test(strip(item.title))) return false;
   const hasDocente = matchesAny(text, KW_DOCENTE);
   const hasFamilia = matchesAny(text, KW_FAMILIA);
   return hasDocente && hasFamilia;
